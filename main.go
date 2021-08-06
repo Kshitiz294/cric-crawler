@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
+	gosxnotifier "github.com/deckarep/gosx-notifier"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/debug"
 )
@@ -108,7 +110,44 @@ func crawl(quit chan bool) {
 
 	crawler.Visit("https://www.cricbuzz.com/live-cricket-scores/32047/eng-vs-ind-1st-test")
 	crawler.Wait()
+
+	pushNotification(summary, batsmen, bowlers)
+}
+
+func pushNotification(summary Summary, batsmen []Batsman, bowlers []Bowler) {
 	fmt.Println(batsmen)
 	fmt.Println(bowlers)
 	fmt.Println(summary)
+
+	//At a minimum specifiy a message to display to end-user.
+    note := gosxnotifier.NewNotification("IND vs ENG")
+
+    //Optionally, set a title
+    note.Title = summary.Score
+
+	bArr := []string{}
+	for _, batsman := range batsmen {
+		s := fmt.Sprintf("%s  %v(%s)", batsman.Name, batsman.Runs, batsman.Balls)
+		bArr = append(bArr, s)
+	}
+
+    //Optionally, set a subtitle
+    note.Subtitle = fmt.Sprintf("%s | %s", bArr[0], bArr[1])
+
+    //Optionally, set a sound from a predefined set.
+    note.Sound = gosxnotifier.Default
+
+    //Optionally, set a group which ensures only one notification is ever shown replacing previous notification of same group id.
+    note.Group = "cric-crawler"
+
+    //Optionally, set a sender (Notification will now use the Safari icon)
+    note.Sender = "com.apple.Safari"
+
+    //Then, push the notification
+    err := note.Push()
+
+    //If necessary, check error
+    if err != nil {
+        log.Println("Uh oh!")
+    }
 }
